@@ -63,13 +63,19 @@ code { color: var(--teal-dark); font-size: .75rem; }
 .result { margin-top: 20px; padding: 18px; border: 1px solid var(--line); border-radius: 13px; background: #fbfdfe; }
 .result[hidden] { display: none; }
 .result.success { border-color: #a7f3d0; background: #f0fdf4; }
+.result.partial { border-color: #fcd34d; background: #fffbeb; }
 .result.error { border-color: #fecaca; background: #fff7f7; }
 .result h2 { margin: 0 0 6px; color: var(--ink); font-size: 1rem; }
 .result p { margin: 5px 0; color: #475569; font-size: .84rem; }
 .certificate-list { display: grid; gap: 8px; max-height: 255px; overflow: auto; margin-top: 14px; }
-.certificate-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 9px; background: white; font-size: .82rem; }
+.certificate-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 9px; background: white; font-size: .82rem; }
 .certificate-item a, .zip-link { color: var(--teal-dark); font-weight: 750; text-decoration: none; white-space: nowrap; }
 .certificate-item a:hover, .zip-link:hover { text-decoration: underline; }
+.certificate-status { font-size: .72rem; font-weight: 800; }
+.certificate-status.completed { color: #15803d; }
+.certificate-status.failed { color: #b91c1c; }
+.certificate-status.processing { color: #a16207; }
+.certificate-error { width: 100%; color: #991b1b; font-size: .75rem; }
 .zip-link { display: inline-flex; margin-top: 13px; }
 .footer { padding: 0 0 27px; color: #94a3b8; font-size: .75rem; text-align: center; }
 

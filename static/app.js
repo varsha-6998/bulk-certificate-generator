@@ -53,12 +53,16 @@ function showMessage(kind, heading, message) {
 
 function displayJob(job) {
   result.hidden = false;
-  result.className = "result success";
+  result.className = `result ${job.status === "COMPLETED" ? "success" : job.status === "PARTIAL" ? "partial" : "error"}`;
   result.replaceChildren();
   const heading = document.createElement("h2");
-  heading.textContent = "Certificates generated successfully";
+  heading.textContent = job.status === "COMPLETED"
+    ? "Certificates generated successfully"
+    : job.status === "PARTIAL"
+      ? "Certificate batch partially completed"
+      : "Certificate generation failed";
   const summary = document.createElement("p");
-  summary.textContent = `Job ID: ${job.id} · ${job.certificate_count} certificate(s)`;
+  summary.textContent = `Job ID: ${job.id} · ${job.successful} successful · ${job.failed} failed · ${job.total} total`;
   const list = document.createElement("div");
   list.className = "certificate-list";
 
@@ -67,19 +71,33 @@ function displayJob(job) {
     item.className = "certificate-item";
     const recipient = document.createElement("span");
     recipient.textContent = `${certificate.recipient_name} (${certificate.recipient_email})`;
-    const link = document.createElement("a");
-    link.href = certificate.download_url;
-    link.textContent = "Download PDF";
-    link.setAttribute("aria-label", `Download certificate for ${certificate.recipient_name}`);
-    item.append(recipient, link);
+    const status = document.createElement("span");
+    status.className = `certificate-status ${certificate.status.toLowerCase()}`;
+    status.textContent = certificate.status;
+    item.append(recipient, status);
+    if (certificate.status === "COMPLETED") {
+      const link = document.createElement("a");
+      link.href = certificate.download_url;
+      link.textContent = "Download PDF";
+      link.setAttribute("aria-label", `Download certificate for ${certificate.recipient_name}`);
+      item.append(link);
+    } else if (certificate.error_message) {
+      const error = document.createElement("span");
+      error.className = "certificate-error";
+      error.textContent = certificate.error_message;
+      item.append(error);
+    }
     list.append(item);
   }
 
-  const zip = document.createElement("a");
-  zip.className = "zip-link";
-  zip.href = `/jobs/${job.id}/download`;
-  zip.textContent = "Download all certificates (.zip)";
-  result.append(heading, summary, list, zip);
+  result.append(heading, summary, list);
+  if (job.successful > 0) {
+    const zip = document.createElement("a");
+    zip.className = "zip-link";
+    zip.href = `/jobs/${job.id}/download`;
+    zip.textContent = "Download successful certificates (.zip)";
+    result.append(zip);
+  }
 }
 
 async function readError(response) {

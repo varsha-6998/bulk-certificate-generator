@@ -8,6 +8,7 @@ A small web application for creating personalized PDF certificates for event att
 - Manual recipient entry and CSV upload
 - Input validation with readable error messages
 - Personalized PDF certificate generation
+- Per-recipient generation status and partial-success reporting
 - SQLite persistence for jobs and certificates
 - Individual PDF and batch ZIP downloads
 - REST API with health check and OpenAPI docs
@@ -113,7 +114,7 @@ curl.exe -X POST http://127.0.0.1:8000/jobs `
   -d '{"event_name":"Annual Tech Symposium","event_date":"2026-10-08","recipients":[{"name":"Varsha R","email":"varsha@example.com"}]}'
 ```
 
-The response includes a numeric `id` (the job ID), a certificate count, and a `download_url` for every generated certificate. Use `GET /jobs/{job_id}` to retrieve those details later, or `GET /jobs/{job_id}/download` to download all PDFs as a ZIP.
+The response includes the numeric job `id`, `status`, `total`, `successful`, and `failed` counts. Each certificate contains its own `status` and, on failure, a safe `error_message`. A recipient's generation failure does not stop other recipients. Job statuses are `COMPLETED` when all succeed, `PARTIAL` when some succeed and some fail, and `FAILED` when all fail. Only successful PDFs are offered for individual download or included in the batch ZIP. Use `GET /jobs/{job_id}` to retrieve job details later.
 
 ### CSV format
 
