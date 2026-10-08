@@ -1,0 +1,23 @@
+# Python environments and bytecode
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local configuration and databases
+.env
+.env.*
+!.env.example
+certificates.db
+*.sqlite
+*.sqlite3
+
+# Generated certificate files
+generated/*.pdf
+generated/*.zip
+
+# Editor and test artifacts
+.vscode/
+.pytest_cache/
+.coverage
+htmlcov/

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f7f8">
+  <title>Bulk Certificate Generator</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell brand"><span class="brand-mark" aria-hidden="true">✦</span> CertiFlow</div>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <span class="eyebrow">Simple · Personal · Printable</span>
+      <h1>Certificates, made in bulk.</h1>
+      <p>Create polished PDF certificates for your event in seconds. Add recipients one by one or upload a CSV, then download certificates individually or as one convenient ZIP.</p>
+    </section>
+
+    <div class="layout">
+      <section class="card form-card" aria-labelledby="form-heading">
+        <h2 class="card-title" id="form-heading">Create a certificate batch</h2>
+        <p class="card-intro">Start with your event details, then add recipients below.</p>
+        <form id="certificate-form">
+          <div class="field-grid">
+            <div class="field">
+              <label for="event-name">Event name</label>
+              <input id="event-name" name="event_name" maxlength="200" placeholder="e.g. Annual Tech Symposium" required>
+            </div>
+            <div class="field">
+              <label for="event-date">Event date</label>
+              <input id="event-date" name="event_date" type="date" required>
+            </div>
+          </div>
+
+          <div class="section-heading">
+            <span class="recipient-head">Recipients</span>
+            <button class="secondary-button" type="button" id="add-recipient">+ Add recipient</button>
+          </div>
+          <div class="recipient-list" id="recipient-list"></div>
+
+          <div class="divider">OR UPLOAD A CSV</div>
+          <label class="upload-box" for="csv-file">
+            <strong>Choose a recipient CSV file</strong>
+            <span>CSV only · up to 5 MB · maximum 500 recipients</span>
+            <input id="csv-file" name="file" type="file" accept=".csv,text/csv">
+          </label>
+
+          <button class="primary-button" type="submit">Generate certificates</button>
+        </form>
+        <section class="result" id="result" aria-live="polite" hidden></section>
+      </section>
+
+      <aside class="card side-card" aria-label="How it works">
+        <h2 class="card-title">How it works</h2>
+        <ol class="steps">
+          <li class="step"><span class="step-number">1</span><div><strong>Describe your event</strong><span>Enter the event name and date that will appear on every certificate.</span></div></li>
+          <li class="step"><span class="step-number">2</span><div><strong>Add your recipients</strong><span>Type recipient details or upload a CSV spreadsheet.</span></div></li>
+          <li class="step"><span class="step-number">3</span><div><strong>Generate and download</strong><span>Get individual PDFs and a ZIP of the whole batch.</span></div></li>
+        </ol>
+        <div class="format-note">
+          <strong>CSV format</strong>
+          <code>name,email<br>Varsha R,varsha@example.com<br>Rahul Kumar,rahul@example.com</code>
+        </div>
+      </aside>
+    </div>
+    <footer class="footer">Bulk Certificate Generator · Made for your next great event</footer>
+  </main>
+</body>
+</html>
