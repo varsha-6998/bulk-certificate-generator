@@ -21,7 +21,7 @@ from starlette.staticfiles import StaticFiles
 
 from app import models
 from app.certificate_generator import generate_certificate
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal, ensure_database_schema, engine
 from app.models import Certificate, CertificateJob
 from app.schemas import JobCreate, RecipientInput
 
@@ -40,11 +40,17 @@ def _job_payload(job: CertificateJob) -> dict:
         "event_date": job.event_date.isoformat(),
         "created_at": job.created_at.isoformat() if job.created_at else None,
         "certificate_count": len(job.certificates),
+        "total": job.total_count,
+        "successful": job.successful_count,
+        "failed": job.failed_count,
+        "status": job.status,
         "certificates": [
             {
                 "id": certificate.id,
                 "recipient_name": certificate.recipient_name,
                 "recipient_email": certificate.recipient_email,
+                "status": certificate.status,
+                "error_message": certificate.error_message,
                 "download_url": f"/certificates/{certificate.id}/download",
             }
             for certificate in job.certificates
@@ -118,38 +124,61 @@ def _parse_csv(data: bytes) -> list[RecipientInput]:
 def _create_job(
     payload: JobCreate, db: Session
 ) -> CertificateJob:
-    job = CertificateJob(event_name=payload.event_name, event_date=payload.event_date)
-    generated_paths: list[Path] = []
-    try:
-        db.add(job)
-        db.flush()
-        for recipient in payload.recipients:
-            filename = f"certificate_{uuid.uuid4().hex}.pdf"
-            output_path = GENERATED_DIR / filename
+    job = CertificateJob(
+        event_name=payload.event_name,
+        event_date=payload.event_date,
+        status="PROCESSING",
+        total_count=len(payload.recipients),
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    for recipient in payload.recipients:
+        filename = f"certificate_{uuid.uuid4().hex}.pdf"
+        output_path = GENERATED_DIR / filename
+        certificate = Certificate(
+            job_id=job.id,
+            recipient_name=recipient.name,
+            recipient_email=recipient.email,
+            filename=filename,
+            status="PROCESSING",
+        )
+        db.add(certificate)
+        db.commit()
+        db.refresh(certificate)
+
+        try:
             generate_certificate(
                 recipient.name, payload.event_name, payload.event_date, output_path
             )
-            generated_paths.append(output_path)
-            db.add(
-                Certificate(
-                    job_id=job.id,
-                    recipient_name=recipient.name,
-                    recipient_email=recipient.email,
-                    filename=filename,
+        except Exception:
+            try:
+                output_path.unlink(missing_ok=True)
+            except OSError:
+                logger.exception(
+                    "Could not remove failed certificate file for certificate %s.",
+                    certificate.id,
                 )
-            )
+            certificate.status = "FAILED"
+            certificate.error_message = "Certificate PDF generation failed."
+            job.failed_count += 1
+            logger.exception("Certificate %s generation failed.", certificate.id)
+        else:
+            certificate.status = "COMPLETED"
+            job.successful_count += 1
+
         db.commit()
-        db.refresh(job)
-        return job
-    except Exception as exc:
-        db.rollback()
-        for path in generated_paths:
-            path.unlink(missing_ok=True)
-        logger.exception("Certificate job generation failed.")
-        raise HTTPException(
-            status_code=500,
-            detail="Certificate generation failed. Please try again.",
-        ) from exc
+
+    if job.failed_count == job.total_count:
+        job.status = "FAILED"
+    elif job.failed_count:
+        job.status = "PARTIAL"
+    else:
+        job.status = "COMPLETED"
+    db.commit()
+    db.refresh(job)
+    return job
 
 
 def create_app(
@@ -158,7 +187,7 @@ def create_app(
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        Base.metadata.create_all(bind=database_engine)
+        ensure_database_schema(database_engine)
         yield
 
     app = FastAPI(
@@ -262,6 +291,11 @@ def create_app(
         )
         if certificate is None:
             raise HTTPException(status_code=404, detail="Certificate not found.")
+        if certificate.status != "COMPLETED":
+            raise HTTPException(
+                status_code=404,
+                detail="Certificate was not generated successfully.",
+            )
         path = _safe_certificate_path(certificate.filename)
         return FileResponse(
             path,
@@ -274,15 +308,23 @@ def create_app(
         job = db.query(CertificateJob).filter(CertificateJob.id == job_id).first()
         if job is None:
             raise HTTPException(status_code=404, detail="Job not found.")
-        if not job.certificates:
-            raise HTTPException(status_code=404, detail="This job has no certificates.")
+        completed_certificates = [
+            certificate
+            for certificate in job.certificates
+            if certificate.status == "COMPLETED"
+        ]
+        if not completed_certificates:
+            raise HTTPException(
+                status_code=404,
+                detail="This job has no successfully generated certificates.",
+            )
 
         archive_buffer = io.BytesIO()
         try:
             with zipfile.ZipFile(
                 archive_buffer, mode="w", compression=zipfile.ZIP_DEFLATED
             ) as archive:
-                for certificate in job.certificates:
+                for certificate in completed_certificates:
                     path = _safe_certificate_path(certificate.filename)
                     archive.write(path, arcname=certificate.filename)
         except HTTPException:
